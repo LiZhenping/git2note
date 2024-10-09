@@ -1,4 +1,5 @@
-// index.js
+
+
 import dotenv from 'dotenv';
 dotenv.config(); // 加载环境变量
 
@@ -308,9 +309,10 @@ async function ensureWikiSection(pageId, fileContent) {
           },
           {
             object: "block",
-            type: "paragraph",
-            paragraph: {
+            type: "code",
+            code: {
               rich_text: await generateWikiComment(fileContent),
+              language: "markdown",
             },
           },
         ],
@@ -323,63 +325,60 @@ async function ensureWikiSection(pageId, fileContent) {
 }
 
 // 生成 Wiki 注释的函数，使用 OpenAI 库调用 Qwen Max 模型
-async function generateWikiComment(fileContent) {
-  const maxRetries = 3;
-  let retries = 0;
+async function generateWikiComment(fileContent) {  
+  const maxRetries = 3;  
+  let retries = 0;  
 
-  while (retries < maxRetries) {
-    try {
-      const prompt = "请为这段代码生成一个简要的Wiki注释，用markdown格式返回:";
-      const code = "\n" + fileContent + "\n";
-      const openai = new OpenAI({
-        // 若没有配置环境变量，请用百炼API Key将下行替换为：apiKey: "sk-xxx",
-        apiKey: process.env.DASHSCOPE_API_KEY,
-        baseURL: "https://dashscope.aliyuncs.com/compatible-mode/v1",
-      });
+  while (retries < maxRetries) {  
+    try {  
+      const prompt = "请为这段代码生成一个简要的Wiki注释，用markdown格式返回:";  
+      const code = "\n" + fileContent + "\n";  
+      const openai = new OpenAI({  
+        apiKey: process.env.DASHSCOPE_API_KEY,  
+        baseURL: "https://dashscope.aliyuncs.com/compatible-mode/v1",  
+      });  
 
-      const completion = await openai.chat.completions.create({
-        model: "qwen-plus", // 模型列表：https://help.aliyun.com/zh/model-studio/getting-started/models
-        messages: [
-          { role: "system", content: "You are a helpful assistant." },
-          { role: "user", content: prompt + code },
-        ],
-      });
+      const completion = await openai.chat.completions.create({  
+        model: "qwen-max-latest",  
+        messages: [  
+          { role: "system", content: "You are a helpful assistant." },  
+          { role: "user", content: prompt + code },  
+        ],  
+      });  
 
-      const generatedComment = completion.choices[0].message.content;
-      console.log(generatedComment);
+      let generatedComment = completion.choices[0].message.content;  
 
-      return [
-        {
-          type: "text",
-          text: {
-            content: generatedComment,
-          },
-          annotations: {
-            code: true,
-          },
-        },
-      ];
-    } catch (error) {
-      console.error(`生成 Wiki 注释时发生错误（重试 ${retries + 1}/${maxRetries}）：`, error);
-      retries++;
+      // 移除生成的注释内容中的 ```markdown 和 ```  
+      generatedComment = generatedComment.replace(/```markdown\s*/g, '').replace(/```/g, '').trim();  
+      // 移除多余的三引号  
+      generatedComment = generatedComment.replace(/^"{3,}|'{3,}/g, '').replace(/"{3,}$|'{3,}$/g, '').trim();  
 
-      if (retries === maxRetries) {
-        // 达到最大重试次数，返回默认注释
-        return [
-          {
-            type: "text",
-            text: {
-              content: "抱歉，无法生成注释。请检查代码或稍后重试。",
-            },
-            annotations: {
-              code: true,
-            },
-          },
-        ];
-      }
-    }
-  }
-}
+      return [  
+        {  
+          type: "text",  
+          text: {  
+            content: generatedComment,  
+          },  
+        },  
+      ];  
+    } catch (error) {  
+      console.error(`生成 Wiki 注释时发生错误（重试 ${retries + 1}/${maxRetries}）：`, error);  
+      retries++;  
+
+      if (retries === maxRetries) {  
+        return [  
+          {  
+            type: "text",  
+            text: {  
+              content: "抱歉，无法生成注释。请检查代码或稍后重试。",  
+            },  
+          },  
+        ];  
+      }  
+    }  
+  }  
+}  
+
 
 
 // 搜索 Notion 页面的函数
@@ -438,3 +437,4 @@ function splitTextIntoChunks(text, maxLength = 2000) {
 
 // 执行同步
 syncRepoToNotion();
+
