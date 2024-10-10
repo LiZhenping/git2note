@@ -329,7 +329,7 @@ async function generateWikiComment(fileContent) {
 
   while (retries < maxRetries) {  
     try {  
-      const prompt = "请为这段代码生成一个简要的Wiki注释，用markdown格式返回:";  
+      const prompt = this.config.prompt;  
       const code = "\n" + fileContent + "\n";  
       const openai = new OpenAI({  
         apiKey: process.env.DASHSCOPE_API_KEY,  

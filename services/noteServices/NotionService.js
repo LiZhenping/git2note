@@ -94,10 +94,24 @@ export class NotionService extends INoteService {
           }
           // 如果有其他类型的 rich_text，可以在这里处理
         });
-
+        const maxBlocksPerRequest = 50;
         // 添加"Wiki 注释"代码块（单个块）
         await this.addContentBlocks(contentBlocks, 'markdown', wikiCommentContent, 2000);
+       
+        // 批量添加Wiki 注释块到 Notion，避免超过 API 限制
+        for (let i = 0; i < contentBlocks.length; i += maxBlocksPerRequest) {
+          const blockChunk = contentBlocks.slice(i, i + maxBlocksPerRequest);
+          console.log(`添加内容块 ${i + 1} 到 ${i + blockChunk.length}`);
+          await this.limiter.schedule(() =>
+            this.notion.blocks.children.append({
+              block_id: pageId,
+              children: blockChunk,
+            })
+          );
+        }
 
+        console.log(`已更新页面内容块：${pageId}`);
+        
         // 添加"源代码"标题
         contentBlocks.push({
           type: 'heading_2',
@@ -118,7 +132,7 @@ export class NotionService extends INoteService {
         await this.addContentBlocks(contentBlocks, languageMap[language] || 'python', fileContent, 2000);
 
         // 批量添加内容块到 Notion，避免超过 API 限制
-        const maxBlocksPerRequest = 50;
+
         for (let i = 0; i < contentBlocks.length; i += maxBlocksPerRequest) {
           const blockChunk = contentBlocks.slice(i, i + maxBlocksPerRequest);
           console.log(`添加内容块 ${i + 1} 到 ${i + blockChunk.length}`);

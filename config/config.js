@@ -15,5 +15,6 @@ export function loadConfig() {
       repo: process.env.GITHUB_REPO_NAME,
     },
     allowedExtensions: ['js', 'ts', 'py', 'sh'], // 根据需要添加其他扩展名
+    prompt: process.env.PROMPT,
   };
 }

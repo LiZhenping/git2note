@@ -21,12 +21,13 @@ export class QwenService extends IAIModelService {
 
   // 生成 Wiki 注释的函数
   async generateWikiComment(fileContent) {
+    
     const maxRetries = 3;
     let retries = 0;
 
     while (retries < maxRetries) {
       try {
-        const prompt = "请为这段代码生成一个简要的Wiki注释，用markdown格式返回:";
+        const prompt = this.config.prompt;
         const code = "\n" + fileContent + "\n";
         if (code.length > 50000) {
           return [
@@ -41,9 +42,9 @@ export class QwenService extends IAIModelService {
         
 
         const completion = await this.openai.chat.completions.create({
-          model: "qwen-max",
+          model: "qwen-max-latest",
           messages: [
-            { role: "system", content: "You are a helpful assistant." },
+            { role: "system", content: "你是一个代码注释助手." },
             { role: "user", content: prompt + code },
           ],
         });
@@ -55,13 +56,8 @@ export class QwenService extends IAIModelService {
         // 移除多余的引号
         generatedComment = generatedComment.replace(/^"{3,}|'{3,}/g, '').replace(/"{3,}$|'{3,}$/g, '').trim();
 
-        // 确保生成的注释不超过2000字符
-        const maxCommentLength = 2000;
-        if (generatedComment.length > maxCommentLength) {
-          generatedComment = generatedComment.slice(0, maxCommentLength) + '...';
-          console.warn(`生成的 Wiki 注释超过 ${maxCommentLength} 个字符，已截断。`);
-        }
 
+      
         return [
           {
             type: "text",
@@ -92,6 +88,7 @@ export class QwenService extends IAIModelService {
       }
     }
   }
+
 
   // 添加一个辅助函数用于延迟
   delay(ms) {
