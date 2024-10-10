@@ -14,6 +14,6 @@ export function loadConfig() {
       owner: process.env.GITHUB_REPO_OWNER,
       repo: process.env.GITHUB_REPO_NAME,
     },
-    allowedExtensions: ['js', 'ts', 'py', 'sh', 'yml', 'yaml'], // 根据需要添加其他扩展名
+    allowedExtensions: ['js', 'ts', 'py', 'sh'], // 根据需要添加其他扩展名
   };
 }

@@ -28,6 +28,17 @@ export class QwenService extends IAIModelService {
       try {
         const prompt = "请为这段代码生成一个简要的Wiki注释，用markdown格式返回:";
         const code = "\n" + fileContent + "\n";
+        if (code.length > 50000) {
+          return [
+            {
+              type: "text",
+              text: {
+                content: "抱歉，无法生成注释。因为这段字符串len(code)超过了5W。",
+              },
+            },
+          ];
+        }
+        
 
         const completion = await this.openai.chat.completions.create({
           model: "qwen-plus",
