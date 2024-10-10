@@ -44,8 +44,8 @@ export class QwenService extends IAIModelService {
         // 移除多余的引号
         generatedComment = generatedComment.replace(/^"{3,}|'{3,}/g, '').replace(/"{3,}$|'{3,}$/g, '').trim();
 
-        // 限制生成注释的长度（例如，不超过 1500 个字符）
-        const maxCommentLength = 1500;
+        // 确保生成的注释不超过2000字符
+        const maxCommentLength = 2000;
         if (generatedComment.length > maxCommentLength) {
           generatedComment = generatedComment.slice(0, maxCommentLength) + '...';
           console.warn(`生成的 Wiki 注释超过 ${maxCommentLength} 个字符，已截断。`);
@@ -60,8 +60,8 @@ export class QwenService extends IAIModelService {
           },
         ];
       } catch (error) {
-        console.error(`生成 Wiki 注释时发生错误（重试 ${retries + 1}/${maxRetries}）：`, error.message);
         retries++;
+        console.error(`生成 Wiki 注释时发生错误（重试 ${retries}/${maxRetries}）：`, error.message);
 
         if (retries === maxRetries) {
           return [
@@ -72,8 +72,18 @@ export class QwenService extends IAIModelService {
               },
             },
           ];
+        } else {
+          // 等待一段时间后重试（指数退避）
+          const delayTime = 1000 * Math.pow(2, retries); // 2, 4, 8 秒
+          console.log(`等待 ${delayTime} 毫秒后重试...`);
+          await this.delay(delayTime);
         }
       }
     }
+  }
+
+  // 添加一个辅助函数用于延迟
+  delay(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
   }
 }

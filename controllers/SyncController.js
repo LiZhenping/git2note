@@ -1,4 +1,4 @@
-// controllers/SyncController.js
+// src/controllers/SyncController.js
 
 import { mapExtensionToLanguage } from '../utils/utils.js';
 
@@ -64,7 +64,7 @@ export class SyncController {
       console.log(`生成 Wiki 注释：${wikiCommentBlocks.length} 块`);
 
       // 生成语言映射
-      const language = mapExtensionToLanguage(extension); // 修正参数
+      const language = mapExtensionToLanguage(extension);
 
       // 创建或更新页面
       const page = await noteService.createOrUpdatePage(fileName, parentPageId);

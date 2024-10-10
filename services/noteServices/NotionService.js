@@ -63,7 +63,7 @@ export class NotionService extends INoteService {
         await this.clearPageBlocks(pageId);
         console.log(`已清空页面内容块：${pageId}`);
 
-        // 创建内容块数组
+        // 创建内容块数组，添加"Wiki 注释"标题
         const contentBlocks = [
           {
             type: 'heading_2',
@@ -80,7 +80,7 @@ export class NotionService extends INoteService {
           },
         ];
 
-        // 处理 Wiki 注释
+        // 拼接所有Wiki注释文本
         let wikiCommentContent = '';
         wikiCommentBlocks.forEach(block => {
           if (block.type === 'text') {
@@ -89,52 +89,30 @@ export class NotionService extends INoteService {
           // 如果有其他类型的 rich_text，可以在这里处理
         });
 
-        // 拆分 Wiki 注释内容为不超过 2000 个字符的块
+        // 拆分Wiki注释为不超过2000字符的块
         const wikiChunks = this.splitTextIntoChunks(wikiCommentContent, 2000);
         console.log(`Wiki 注释已拆分为 ${wikiChunks.length} 个块`);
 
-        // 为每个 Wiki 注释块创建一个代码块
-        for (const [index, chunk] of wikiChunks.entries()) {
-          if (chunk.length > 2000) {
-            console.warn(`Wiki 注释块 ${index + 1} 超过 2000 个字符，进一步拆分`);
-            const smallerChunks = this.splitTextIntoChunks(chunk, 2000);
-            for (const [subIndex, smallerChunk] of smallerChunks.entries()) {
-              console.log(`创建 Wiki 注释代码块 ${index + 1}.${subIndex + 1}，长度: ${smallerChunk.length} 字符`);
-              contentBlocks.push({
-                type: 'code',
-                code: {
-                  language: 'markdown',
-                  rich_text: [
-                    {
-                      type: 'text',
-                      text: {
-                        content: smallerChunk,
-                      },
-                    },
-                  ],
-                },
-              });
-            }
-          } else {
-            console.log(`创建 Wiki 注释代码块 ${index + 1}，长度: ${chunk.length} 字符`);
-            contentBlocks.push({
-              type: 'code',
-              code: {
-                language: 'markdown',
-                rich_text: [
-                  {
-                    type: 'text',
-                    text: {
-                      content: chunk,
-                    },
+        // 将每个Wiki注释块作为一个完整的代码块添加
+        wikiChunks.forEach((chunk, index) => {
+          console.log(`添加Wiki注释代码块 ${index + 1}，长度: ${chunk.length} 字符`);
+          contentBlocks.push({
+            type: 'code',
+            code: {
+              language: 'markdown',
+              rich_text: [
+                {
+                  type: 'text',
+                  text: {
+                    content: chunk,
                   },
-                ],
-              },
-            });
-          }
-        }
+                },
+              ],
+            },
+          });
+        });
 
-        // 添加源代码的标题
+        // 添加"源代码"标题
         contentBlocks.push({
           type: 'heading_2',
           heading_2: {
@@ -149,52 +127,30 @@ export class NotionService extends INoteService {
           },
         });
 
-        // 拆分源代码内容为不超过 2000 个字符的块
+        // 拆分源代码为不超过2000字符的块
         const sourceCodeChunks = this.splitTextIntoChunks(fileContent, 2000);
         console.log(`源代码已拆分为 ${sourceCodeChunks.length} 个块`);
 
-        // 为每个源代码块创建一个代码块
-        for (const [index, chunk] of sourceCodeChunks.entries()) {
-          if (chunk.length > 2000) {
-            console.warn(`源代码块 ${index + 1} 超过 2000 个字符，进一步拆分`);
-            const smallerChunks = this.splitTextIntoChunks(chunk, 2000);
-            for (const [subIndex, smallerChunk] of smallerChunks.entries()) {
-              console.log(`创建源代码代码块 ${index + 1}.${subIndex + 1}，长度: ${smallerChunk.length} 字符`);
-              contentBlocks.push({
-                type: 'code',
-                code: {
-                  language: language,
-                  rich_text: [
-                    {
-                      type: 'text',
-                      text: {
-                        content: smallerChunk,
-                      },
-                    },
-                  ],
-                },
-              });
-            }
-          } else {
-            console.log(`创建源代码代码块 ${index + 1}，长度: ${chunk.length} 字符`);
-            contentBlocks.push({
-              type: 'code',
-              code: {
-                language: language,
-                rich_text: [
-                  {
-                    type: 'text',
-                    text: {
-                      content: chunk,
-                    },
+        // 将每个源代码块作为一个完整的代码块添加
+        sourceCodeChunks.forEach((chunk, index) => {
+          console.log(`添加源代码块 ${index + 1}，长度: ${chunk.length} 字符`);
+          contentBlocks.push({
+            type: 'code',
+            code: {
+              language: language,
+              rich_text: [
+                {
+                  type: 'text',
+                  text: {
+                    content: chunk,
                   },
-                ],
-              },
-            });
-          }
-        }
+                },
+              ],
+            },
+          });
+        });
 
-        // 分批添加新的内容块，避免超过 Notion API 的限制
+        // 批量添加内容块到Notion，避免超过API限制
         const maxBlocksPerRequest = 50;
         for (let i = 0; i < contentBlocks.length; i += maxBlocksPerRequest) {
           const blockChunk = contentBlocks.slice(i, i + maxBlocksPerRequest);
@@ -218,7 +174,7 @@ export class NotionService extends INoteService {
           throw error; // 重新抛出错误以便上层捕获
         } else {
           // 等待一段时间后重试（指数退避）
-          const delayTime = 1000 * attempt; // 例如，1秒后重试，2秒后再试一次
+          const delayTime = 1000 * Math.pow(2, attempt); // 2, 4, 8 秒
           console.log(`等待 ${delayTime} 毫秒后重试...`);
           await this.delay(delayTime);
         }
@@ -304,14 +260,14 @@ export class NotionService extends INoteService {
       if (end >= text.length) {
         end = text.length;
       } else {
-        // 在最后一个换行符处截断，避免拆分代码结构
+        // 尝试在maxLength之前的最后一个换行符处分割
         const lastNewLine = text.lastIndexOf('\n', end);
         if (lastNewLine > start) {
           end = lastNewLine + 1; // 包含换行符
         }
       }
 
-      // 确保 chunk 的长度不超过 maxLength
+      // 确保块的长度不超过maxLength
       if (end - start > maxLength) {
         end = start + maxLength;
       }
