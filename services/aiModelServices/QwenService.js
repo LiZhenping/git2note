@@ -41,7 +41,7 @@ export class QwenService extends IAIModelService {
         
 
         const completion = await this.openai.chat.completions.create({
-          model: "qwen-plus",
+          model: "qwen-max",
           messages: [
             { role: "system", content: "You are a helpful assistant." },
             { role: "user", content: prompt + code },

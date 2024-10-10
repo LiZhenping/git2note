@@ -4,6 +4,12 @@ import { Client } from '@notionhq/client';
 import { INoteService } from '../../interfaces/INoteService.js';
 import Bottleneck from 'bottleneck';
 
+const languageMap = {
+  'js': 'javascript',
+  'py': 'python',
+  // 添加其他语言的映射
+};
+
 export class NotionService extends INoteService {
   constructor(config) {
     super();
@@ -89,28 +95,8 @@ export class NotionService extends INoteService {
           // 如果有其他类型的 rich_text，可以在这里处理
         });
 
-        // 拆分Wiki注释为不超过2000字符的块
-        const wikiChunks = this.splitTextIntoChunks(wikiCommentContent, 2000);
-        console.log(`Wiki 注释已拆分为 ${wikiChunks.length} 个块`);
-
-        // 将每个Wiki注释块作为一个完整的代码块添加
-        wikiChunks.forEach((chunk, index) => {
-          console.log(`添加Wiki注释代码块 ${index + 1}，长度: ${chunk.length} 字符`);
-          contentBlocks.push({
-            type: 'code',
-            code: {
-              language: 'markdown',
-              rich_text: [
-                {
-                  type: 'text',
-                  text: {
-                    content: chunk,
-                  },
-                },
-              ],
-            },
-          });
-        });
+        // 添加"Wiki 注释"代码块（单个块）
+        await this.addContentBlocks(contentBlocks, 'markdown', wikiCommentContent, 2000);
 
         // 添加"源代码"标题
         contentBlocks.push({
@@ -121,36 +107,17 @@ export class NotionService extends INoteService {
                 type: 'text',
                 text: {
                   content: '源代码',
-                },
-              },
-            ],
-          },
-        });
-
-        // 拆分源代码为不超过2000字符的块
-        const sourceCodeChunks = this.splitTextIntoChunks(fileContent, 2000);
-        console.log(`源代码已拆分为 ${sourceCodeChunks.length} 个块`);
-
-        // 将每个源代码块作为一个完整的代码块添加
-        sourceCodeChunks.forEach((chunk, index) => {
-          console.log(`添加源代码块 ${index + 1}，长度: ${chunk.length} 字符`);
-          contentBlocks.push({
-            type: 'code',
-            code: {
-              language: language,
-              rich_text: [
-                {
-                  type: 'text',
-                  text: {
-                    content: chunk,
                   },
                 },
               ],
             },
-          });
-        });
+          },
+        );
 
-        // 批量添加内容块到Notion，避免超过API限制
+        // 添加"源代码"代码块（单个块），使用映射后的语言标识符
+        await this.addContentBlocks(contentBlocks, languageMap[language] || 'python', fileContent, 2000);
+
+        // 批量添加内容块到 Notion，避免超过 API 限制
         const maxBlocksPerRequest = 50;
         for (let i = 0; i < contentBlocks.length; i += maxBlocksPerRequest) {
           const blockChunk = contentBlocks.slice(i, i + maxBlocksPerRequest);
@@ -180,6 +147,29 @@ export class NotionService extends INoteService {
         }
       }
     }
+  }
+
+  // 修改后的方法：添加多个内容块（合并为一个代码块）
+  async addContentBlocks(contentBlocks, language, content, maxLength) {
+    // 将内容拆分为不超过 maxLength 的多个块
+    const chunks = this.splitTextIntoChunks(content, maxLength);
+
+    // 创建 rich_text 数组，将所有的文本块添加进去
+    const richTextItems = chunks.map(chunk => ({
+      type: 'text',
+      text: {
+        content: chunk,
+      },
+    }));
+
+    // 将所有 rich_text 项合并到一个代码块中，使用正确的语言标识符
+    contentBlocks.push({
+      type: 'code',
+      code: {
+        language: language,
+        rich_text: richTextItems,
+      },
+    });
   }
 
   async getPageContent(pageId) {
@@ -244,7 +234,10 @@ export class NotionService extends INoteService {
       }
       return null;
     } catch (error) {
-      console.error(`搜索 Notion 页面时出错（页面名称：${pageName}，父页面ID：${parentPageId}）：`, error.message);
+      console.error(
+        `搜索 Notion 页面时出错（页面名称：${pageName}，父页面ID：${parentPageId}）：`,
+        error.message
+      );
       return null;
     }
   }
