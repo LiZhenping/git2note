@@ -15,7 +15,7 @@
 
 #### 使用说明
 
-1.  xxxx
+1.  运行代码请使用 `node index.js`
 2.  xxxx
 3.  xxxx
 
