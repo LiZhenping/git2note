@@ -247,33 +247,32 @@ async function clearPageBlocks(pageId) {
   }
 }
 
+
 // 创建内容块，返回块数组
 function createContentBlocks(fileContent, language, extension) {
   // 清理文件内容，移除无效的 Unicode 字符，但保留换行符 (\n)、回车符 (\r) 和制表符 (\t)
-  const cleanedContent = fileContent.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/g, "");
+  const cleanedContent = fileContent.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/g, '');
 
   // 将内容拆分成不超过 2000 个字符的片段
-  const chunks = splitTextIntoChunks(cleanedContent, 2000);
-
-  // Notion 对每个代码块的 rich_text 数组有最大 100 个元素的限制
-  const maxRichTextPerBlock = 100;
+  const maxContentLength = 2000;
+  const chunks = splitTextIntoChunks(cleanedContent, maxContentLength);
 
   let blocks = [];
 
-  // 根据限制创建代码块
-  for (let i = 0; i < chunks.length; i += maxRichTextPerBlock) {
-    const chunkBatch = chunks.slice(i, i + maxRichTextPerBlock);
-
-    const richTextArray = chunkBatch.map(chunk => ({
-      type: "text",
-      text: { content: chunk }
-    }));
-
+  // 为每个片段创建一个代码块
+  for (const chunk of chunks) {
     blocks.push({
-      object: "block",
-      type: "code",
+      object: 'block',
+      type: 'code',
       code: {
-        rich_text: richTextArray,
+        rich_text: [
+          {
+            type: 'text',
+            text: {
+              content: chunk,
+            },
+          },
+        ],
         language: language,
       },
     });
@@ -281,6 +280,8 @@ function createContentBlocks(fileContent, language, extension) {
 
   return blocks;
 }
+
+
 
 // 确保页面中有 "Wiki 注释" 部分
 async function ensureWikiSection(pageId, fileContent) {
@@ -321,6 +322,8 @@ async function ensureWikiSection(pageId, fileContent) {
     // 继续处理其他文件
   }
 }
+
+
 
 // 生成 Wiki 注释的函数，使用 OpenAI 库调用 Qwen Max 模型
 async function generateWikiComment(fileContent) {  

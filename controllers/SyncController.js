@@ -1,4 +1,3 @@
-
 // controllers/SyncController.js
 
 import { mapExtensionToLanguage } from '../utils/utils.js';
@@ -37,6 +36,7 @@ export class SyncController {
 
       // 创建或更新对应的页面
       const page = await noteService.createOrUpdatePage(itemName, parentPageId);
+      console.log(`已创建或更新 Notion 页面：${itemName} (ID: ${page.id})`);
 
       const children = await gitService.getRepositoryContents(item.path);
 
@@ -57,67 +57,22 @@ export class SyncController {
 
       // 获取文件内容
       const fileContent = await gitService.getFileContent(item.path);
+      console.log(`获取文件内容：${item.path} (长度: ${fileContent.length} 字符)`);
 
       // 使用 AI 模型服务生成 Wiki 注释
       const wikiCommentBlocks = await aiModelService.generateWikiComment(fileContent);
+      console.log(`生成 Wiki 注释：${wikiCommentBlocks.length} 块`);
 
-      // 创建用于 Notion 的内容块
-      const contentBlocks = [
-        {
-          type: 'heading_2',
-          heading_2: {
-            rich_text: [
-              {
-                type: 'text',
-                text: {
-                  content: 'Wiki 注释',
-                },
-              },
-            ],
-          },
-        },
-        {
-          type: 'code',
-          code: {
-            language: 'markdown',
-            rich_text: wikiCommentBlocks,
-          },
-        },
-        {
-          type: 'heading_2',
-          heading_2: {
-            rich_text: [
-              {
-                type: 'text',
-                text: {
-                  content: '源代码',
-                },
-              },
-            ],
-          },
-        },
-        {
-          type: 'code',
-          code: {
-            language: mapExtensionToLanguage(fileName),
-            rich_text: [
-              {
-                type: 'text',
-                text: {
-                  content: fileContent,
-                },
-              },
-            ],
-          },
-        },
-      ];
+      // 生成语言映射
+      const language = mapExtensionToLanguage(extension); // 修正参数
 
       // 创建或更新页面
       const page = await noteService.createOrUpdatePage(fileName, parentPageId);
+      console.log(`已创建或更新 Notion 页面：${fileName} (ID: ${page.id})`);
 
       // 更新页面内容
-      await noteService.clearPageBlocks(page.id);
-      await noteService.appendPageBlocks(page.id, contentBlocks);
+      await noteService.updatePageContent(page.id, wikiCommentBlocks, fileContent, language);
+      console.log(`已更新页面内容：${page.id}`);
     }
   }
 }

@@ -2,19 +2,22 @@
   "name": "github-to-notion",
   "version": "1.0.0",
   "type": "module",
-  "main": "src/main.js",
+  "main": "main.js",
   "scripts": {
-    "start": "node src/main.js",
+    "start": "node main.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
+  "author": "Li ZhenPing",
+  "license": "Mit",
+  "description": "将 Git 仓库内容同步到 Note 页面，目前仅支持 GitHub 和 Notion",
   "dependencies": {
     "@notionhq/client": "^2.2.15",
     "@octokit/rest": "^21.0.2",
+    "bottleneck": "^2.19.5",
     "dotenv": "^16.4.5",
-    "openai": "^4.7.2"
+    "node-fetch": "^3.3.1",
+    "openai": "^4.7.2",
+    "winston": "^3.15.0"
   }
 }
