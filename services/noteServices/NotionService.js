@@ -69,80 +69,56 @@ export class NotionService extends INoteService {
         await this.clearPageBlocks(pageId);
         console.log(`已清空页面内容块：${pageId}`);
 
-        // 创建内容块数组，添加"Wiki 注释"标题
-        const contentBlocks = [
+        // 创建并添加 "Wiki 注释" 部分
+        const wikiContentBlocks = [
           {
             type: 'heading_2',
             heading_2: {
               rich_text: [
                 {
                   type: 'text',
-                  text: {
-                    content: 'Wiki 注释',
-                  },
+                  text: { content: 'Wiki 注释' },
                 },
               ],
             },
           },
         ];
 
-        // 拼接所有Wiki注释文本
+        // 拼接所有 Wiki 注释文本
         let wikiCommentContent = '';
         wikiCommentBlocks.forEach(block => {
           if (block.type === 'text') {
             wikiCommentContent += block.text.content + '\n';
           }
-          // 如果有其他类型的 rich_text，可以在这里处理
+          // 处理其他类型的 rich_text
         });
-        const maxBlocksPerRequest = 50;
-        // 添加"Wiki 注释"代码块（单个块）
-        await this.addContentBlocks(contentBlocks, 'markdown', wikiCommentContent, 2000);
-       
-        // 批量添加Wiki 注释块到 Notion，避免超过 API 限制
-        for (let i = 0; i < contentBlocks.length; i += maxBlocksPerRequest) {
-          const blockChunk = contentBlocks.slice(i, i + maxBlocksPerRequest);
-          console.log(`添加内容块 ${i + 1} 到 ${i + blockChunk.length}`);
-          await this.limiter.schedule(() =>
-            this.notion.blocks.children.append({
-              block_id: pageId,
-              children: blockChunk,
-            })
-          );
-        }
 
-        console.log(`已更新页面内容块：${pageId}`);
-        
-        // 添加"源代码"标题
-        contentBlocks.push({
-          type: 'heading_2',
-          heading_2: {
-            rich_text: [
-              {
-                type: 'text',
-                text: {
-                  content: '源代码',
-                  },
+        // 添加 "Wiki 注释" 代码块
+        await this.addContentBlocks(wikiContentBlocks, 'markdown', wikiCommentContent, 2000);
+
+        // 批量添加 "Wiki 注释" 内容块到 Notion
+        await this.appendPageBlocks(pageId, wikiContentBlocks);
+
+        // 创建并添加 "源代码" 部分
+        const sourceCodeBlocks = [
+          {
+            type: 'heading_2',
+            heading_2: {
+              rich_text: [
+                {
+                  type: 'text',
+                  text: { content: '源代码' },
                 },
               ],
             },
           },
-        );
+        ];
 
-        // 添加"源代码"代码块（单个块），使用映射后的语言标识符
-        await this.addContentBlocks(contentBlocks, languageMap[language] || 'python', fileContent, 2000);
+        // 添加 "源代码" 代码块，使用映射后的语言标识符
+        await this.addContentBlocks(sourceCodeBlocks, languageMap[language] || 'python', fileContent, 2000);
 
-        // 批量添加内容块到 Notion，避免超过 API 限制
-
-        for (let i = 0; i < contentBlocks.length; i += maxBlocksPerRequest) {
-          const blockChunk = contentBlocks.slice(i, i + maxBlocksPerRequest);
-          console.log(`添加内容块 ${i + 1} 到 ${i + blockChunk.length}`);
-          await this.limiter.schedule(() =>
-            this.notion.blocks.children.append({
-              block_id: pageId,
-              children: blockChunk,
-            })
-          );
-        }
+        // 批量添加 "源代码" 内容块到 Notion
+        await this.appendPageBlocks(pageId, sourceCodeBlocks);
 
         console.log(`已更新页面内容块：${pageId}`);
         break; // 成功后跳出循环
